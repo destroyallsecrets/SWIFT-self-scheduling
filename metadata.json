@@ -1,0 +1,5 @@
+{
+  "name": "SWIFT",
+  "description": "Schedule, Wages, Income, Financial Tracker. A mobile-first self-scheduling tool for Indianapolis workers with real-time tax estimation and AI-powered schedule syncing.",
+  "requestFramePermissions": []
+}
