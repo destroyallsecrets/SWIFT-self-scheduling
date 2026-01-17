@@ -59,10 +59,10 @@ const ShiftCard: React.FC<ShiftCardProps> = ({ shift, actionType = 'NONE', onAct
             </div>
           </div>
           
-          <div className="flex items-center gap-1.5 text-xs text-gray-300 font-medium">
+          <div className="flex items-center gap-1.5 text-xs text-gray-300 font-medium flex-wrap">
              <span className="flex items-center text-wish-accent">
                <svg className="w-3 h-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-               {startTime}
+               {startTime} - {endTime}
              </span>
              <span className="text-gray-600">•</span>
              <span>{hours.toFixed(1)} hrs</span>

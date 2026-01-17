@@ -37,9 +37,6 @@ export const filterShiftsByPeriod = (shifts: Shift[], period: 'day' | 'week' | '
     }
     
     if (period === 'week') {
-      // Assuming week starts on Monday for pay period standard, or Sunday. 
-      // Let's use simple ISO week logic or +/- days.
-      // Simple logic: Is it in the same ISO week?
       const dTime = d.getTime();
       const currentDay = referenceDate.getDay(); // 0 is Sunday
       const diffToMonday = currentDay === 0 ? 6 : currentDay - 1; 
@@ -62,5 +59,85 @@ export const filterShiftsByPeriod = (shifts: Shift[], period: 'day' | 'week' | '
     }
 
     return false;
+  });
+};
+
+export interface MonthlyGroup {
+  monthLabel: string; // e.g., "May 2026"
+  year: number;
+  monthIndex: number;
+  shifts: Shift[];
+  earnings: Earnings;
+  weeks: WeeklyGroup[];
+}
+
+export interface WeeklyGroup {
+  label: string; // e.g., "Week of May 4"
+  shifts: Shift[];
+  earnings: Earnings;
+}
+
+export const groupShiftsByMonthAndWeek = (shifts: Shift[]): MonthlyGroup[] => {
+  const groups: Record<string, MonthlyGroup> = {};
+
+  shifts.forEach(shift => {
+    const d = new Date(shift.startDate);
+    const monthKey = `${d.getFullYear()}-${d.getMonth()}`;
+    const monthLabel = d.toLocaleString('en-US', { month: 'long', year: 'numeric' });
+
+    if (!groups[monthKey]) {
+      groups[monthKey] = {
+        monthLabel,
+        year: d.getFullYear(),
+        monthIndex: d.getMonth(),
+        shifts: [],
+        earnings: { hours: 0, gross: 0, net: 0, deductions: 0 },
+        weeks: []
+      };
+    }
+
+    groups[monthKey].shifts.push(shift);
+  });
+
+  // Process each month
+  return Object.values(groups).map(monthGroup => {
+    // Calculate Monthly Earnings
+    monthGroup.earnings = getEarningsForShifts(monthGroup.shifts);
+
+    // Group by Week inside the month
+    const weeklyGroups: Record<string, WeeklyGroup> = {};
+    
+    monthGroup.shifts.forEach(shift => {
+      const d = new Date(shift.startDate);
+      // Find Monday of that week
+      const currentDay = d.getDay();
+      const diffToMonday = currentDay === 0 ? 6 : currentDay - 1;
+      const monday = new Date(d);
+      monday.setDate(d.getDate() - diffToMonday);
+      monday.setHours(0,0,0,0);
+      
+      const weekKey = monday.toISOString();
+      const weekLabel = `Week of ${monday.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+
+      if (!weeklyGroups[weekKey]) {
+        weeklyGroups[weekKey] = {
+          label: weekLabel,
+          shifts: [],
+          earnings: { hours: 0, gross: 0, net: 0, deductions: 0 }
+        };
+      }
+      weeklyGroups[weekKey].shifts.push(shift);
+    });
+
+    monthGroup.weeks = Object.values(weeklyGroups).map(week => {
+      week.earnings = getEarningsForShifts(week.shifts);
+      return week;
+    }).sort((a, b) => b.shifts[0].startDate.localeCompare(a.shifts[0].startDate)); // Newest week first
+
+    return monthGroup;
+  }).sort((a, b) => {
+    // Sort months descending (newest first)
+    if (a.year !== b.year) return b.year - a.year;
+    return b.monthIndex - a.monthIndex;
   });
 };

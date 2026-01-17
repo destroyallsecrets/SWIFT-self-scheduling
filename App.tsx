@@ -3,14 +3,17 @@ import { Shift } from './types';
 import { MockBackend } from './services/mockBackend';
 import ShiftCard from './components/ShiftCard';
 import FinancialSummary from './components/FinancialSummary';
+import IncomeHistory from './components/IncomeHistory';
 import ScheduleUploader from './components/ScheduleUploader';
 import Marketplace from './components/Marketplace';
 import EmployerDashboard from './components/EmployerDashboard';
 
 type View = 'SCHEDULE' | 'MARKETPLACE' | 'EMPLOYER';
+type ScheduleTab = 'UPCOMING' | 'HISTORY';
 
 const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<View>('SCHEDULE');
+  const [scheduleTab, setScheduleTab] = useState<ScheduleTab>('UPCOMING');
   const [shifts, setShifts] = useState<Shift[]>([]); 
   const [showUploader, setShowUploader] = useState(false);
   const [notification, setNotification] = useState<string | null>(null);
@@ -43,16 +46,25 @@ const App: React.FC = () => {
     }
   };
 
-  const groupedShifts = useMemo<{ [key: string]: Shift[] }>(() => {
+  // Split shifts into Upcoming and Past
+  const { upcomingShifts, pastShifts } = useMemo(() => {
+    const now = new Date();
+    // A shift is 'past' if its end date is before now
+    const past = shifts.filter(s => new Date(s.endDate) < now).sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime()); // Newest past first
+    const upcoming = shifts.filter(s => new Date(s.endDate) >= now);
+    return { upcomingShifts: upcoming, pastShifts: past };
+  }, [shifts]);
+
+  const groupedUpcomingShifts = useMemo<{ [key: string]: Shift[] }>(() => {
     const groups: { [key: string]: Shift[] } = {};
-    shifts.forEach(shift => {
+    upcomingShifts.forEach(shift => {
       const date = new Date(shift.startDate);
       const key = date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
       if (!groups[key]) groups[key] = [];
       groups[key].push(shift);
     });
     return groups;
-  }, [shifts]);
+  }, [upcomingShifts]);
 
   return (
     <div className="min-h-screen bg-wish-950 font-sans text-gray-100 flex flex-col selection:bg-wish-accent selection:text-white">
@@ -68,7 +80,7 @@ const App: React.FC = () => {
             </div>
           </div>
           <div className="flex items-center gap-3">
-             {currentView === 'SCHEDULE' && (
+             {currentView === 'SCHEDULE' && scheduleTab === 'UPCOMING' && (
                <button 
                 onClick={() => setShowUploader(true)}
                 className="bg-wish-accent hover:bg-indigo-600 text-white w-10 h-10 rounded-full flex items-center justify-center shadow-lg shadow-indigo-500/30 active:scale-90 transition-all"
@@ -84,40 +96,87 @@ const App: React.FC = () => {
         
         {currentView === 'SCHEDULE' && (
           <>
-            <section className="animate-in fade-in slide-in-from-top-4 duration-500">
-              <FinancialSummary shifts={shifts} />
-            </section>
-
-            <section className="space-y-8 pb-12">
-              {shifts.length === 0 ? (
-                <div className="text-center py-20 px-6 bg-wish-900 border border-wish-800 rounded-[2.5rem]">
-                  <div className="text-5xl mb-6 grayscale opacity-50">🗓️</div>
-                  <h3 className="text-xl font-extrabold text-white mb-2">Build Your Schedule</h3>
-                  <p className="text-gray-500 text-sm mb-8 px-4 leading-relaxed font-medium">Sync your existing schedule or claim new shifts from the marketplace.</p>
-                  <button onClick={() => setCurrentView('MARKETPLACE')} className="bg-wish-accent/10 text-wish-accent px-6 py-3 rounded-2xl text-sm font-bold border border-wish-accent/20 active:scale-95 transition-all">Go to Marketplace</button>
-                </div>
-              ) : (
-                (Object.entries(groupedShifts) as [string, Shift[]][]).map(([month, monthShifts]) => (
-                  <div key={month} className="animate-in fade-in duration-700">
-                    <div className="flex items-center gap-4 mb-4">
-                      <h2 className="text-xs font-black text-gray-600 uppercase tracking-[0.2em]">
-                        {month}
-                      </h2>
-                      <div className="h-px flex-grow bg-wish-800"></div>
-                    </div>
-                    <div className="space-y-4">
-                      {monthShifts.map(shift => (
-                        <ShiftCard key={shift.id} shift={shift} />
-                      ))}
-                    </div>
-                  </div>
-                ))
-              )}
-            </section>
-            
-            <div className="flex justify-center pt-8">
-              <button onClick={clearSchedule} className="text-[10px] font-bold text-gray-700 uppercase tracking-widest hover:text-red-500 transition-colors">Reset App Data</button>
+            {/* Segmented Control */}
+            <div className="flex bg-wish-900/50 p-1 rounded-xl border border-wish-800 backdrop-blur-sm">
+              <button 
+                onClick={() => setScheduleTab('UPCOMING')}
+                className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${scheduleTab === 'UPCOMING' ? 'bg-wish-800 text-white shadow-sm border border-wish-700/50' : 'text-gray-500 hover:text-gray-300'}`}
+              >
+                UPCOMING
+              </button>
+              <button 
+                onClick={() => setScheduleTab('HISTORY')}
+                className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${scheduleTab === 'HISTORY' ? 'bg-wish-800 text-white shadow-sm border border-wish-700/50' : 'text-gray-500 hover:text-gray-300'}`}
+              >
+                HISTORY & INCOME
+              </button>
             </div>
+
+            {scheduleTab === 'UPCOMING' ? (
+              <div className="animate-in fade-in slide-in-from-left-4 duration-300">
+                <section className="mb-8">
+                  <FinancialSummary shifts={shifts} />
+                </section>
+
+                <section className="space-y-8 pb-12">
+                  {upcomingShifts.length === 0 ? (
+                    <div className="text-center py-20 px-6 bg-wish-900 border border-wish-800 rounded-[2.5rem]">
+                      <div className="text-5xl mb-6 grayscale opacity-50">🗓️</div>
+                      <h3 className="text-xl font-extrabold text-white mb-2">Build Your Schedule</h3>
+                      <p className="text-gray-500 text-sm mb-8 px-4 leading-relaxed font-medium">Sync your existing schedule or claim new shifts from the marketplace.</p>
+                      <button onClick={() => setCurrentView('MARKETPLACE')} className="bg-wish-accent/10 text-wish-accent px-6 py-3 rounded-2xl text-sm font-bold border border-wish-accent/20 active:scale-95 transition-all">Go to Marketplace</button>
+                    </div>
+                  ) : (
+                    (Object.entries(groupedUpcomingShifts) as [string, Shift[]][]).map(([month, monthShifts]) => (
+                      <div key={month}>
+                        <div className="flex items-center gap-4 mb-4">
+                          <h2 className="text-xs font-black text-gray-600 uppercase tracking-[0.2em]">
+                            {month}
+                          </h2>
+                          <div className="h-px flex-grow bg-wish-800"></div>
+                        </div>
+                        <div className="space-y-4">
+                          {monthShifts.map(shift => (
+                            <ShiftCard key={shift.id} shift={shift} />
+                          ))}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </section>
+                
+                <div className="flex justify-center pt-8">
+                  <button onClick={clearSchedule} className="text-[10px] font-bold text-gray-700 uppercase tracking-widest hover:text-red-500 transition-colors">Reset App Data</button>
+                </div>
+              </div>
+            ) : (
+              <div className="animate-in fade-in slide-in-from-right-4 duration-300">
+                 {/* Income Archive View */}
+                 <div className="mb-8">
+                    <h2 className="text-xl font-black text-white mb-4 flex items-center gap-2">
+                       <span>Monthly Statements</span>
+                       <span className="text-xs font-bold text-gray-500 bg-wish-800 px-2 py-1 rounded-md border border-wish-700/50">ARCHIVE</span>
+                    </h2>
+                    <IncomeHistory shifts={pastShifts} />
+                 </div>
+
+                 {pastShifts.length > 0 && (
+                   <div className="space-y-4 pb-12">
+                     <div className="flex items-center gap-4 mb-4 mt-8">
+                        <h2 className="text-xs font-black text-gray-600 uppercase tracking-[0.2em]">
+                          Past Shift Log
+                        </h2>
+                        <div className="h-px flex-grow bg-wish-800"></div>
+                     </div>
+                     {pastShifts.map(shift => (
+                       <div key={shift.id} className="opacity-75 hover:opacity-100 transition-opacity">
+                         <ShiftCard shift={shift} />
+                       </div>
+                     ))}
+                   </div>
+                 )}
+              </div>
+            )}
           </>
         )}
 
