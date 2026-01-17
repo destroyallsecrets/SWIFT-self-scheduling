@@ -39,10 +39,10 @@ const App: React.FC = () => {
   };
 
   const clearSchedule = () => {
-    if (window.confirm("Reset all data?")) {
+    if (window.confirm("Are you sure you want to clear your entire schedule and history? This cannot be undone.")) {
       MockBackend.reset();
       refreshSchedule();
-      handleNotify("Database Reset");
+      handleNotify("Schedule Cleared");
     }
   };
 
@@ -80,13 +80,25 @@ const App: React.FC = () => {
             </div>
           </div>
           <div className="flex items-center gap-3">
-             {currentView === 'SCHEDULE' && scheduleTab === 'UPCOMING' && (
-               <button 
-                onClick={() => setShowUploader(true)}
-                className="bg-wish-accent hover:bg-indigo-600 text-white w-10 h-10 rounded-full flex items-center justify-center shadow-lg shadow-indigo-500/30 active:scale-90 transition-all"
-               >
-                 <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" /></svg>
-               </button>
+             {currentView === 'SCHEDULE' && (
+               <>
+                 <button 
+                  onClick={clearSchedule}
+                  className="bg-wish-800 hover:bg-red-500/20 hover:text-red-400 text-gray-400 w-10 h-10 rounded-full flex items-center justify-center border border-wish-700/50 active:scale-90 transition-all"
+                  title="Clear Schedule"
+                 >
+                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                 </button>
+
+                 {scheduleTab === 'UPCOMING' && (
+                   <button 
+                    onClick={() => setShowUploader(true)}
+                    className="bg-wish-accent hover:bg-indigo-600 text-white w-10 h-10 rounded-full flex items-center justify-center shadow-lg shadow-indigo-500/30 active:scale-90 transition-all"
+                   >
+                     <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" /></svg>
+                   </button>
+                 )}
+               </>
              )}
           </div>
         </div>
@@ -115,7 +127,8 @@ const App: React.FC = () => {
             {scheduleTab === 'UPCOMING' ? (
               <div className="animate-in fade-in slide-in-from-left-4 duration-300">
                 <section className="mb-8">
-                  <FinancialSummary shifts={shifts} />
+                  {/* Pass upcomingShifts to reflect the projected income of what is shown below */}
+                  <FinancialSummary shifts={upcomingShifts} />
                 </section>
 
                 <section className="space-y-8 pb-12">
@@ -144,10 +157,6 @@ const App: React.FC = () => {
                     ))
                   )}
                 </section>
-                
-                <div className="flex justify-center pt-8">
-                  <button onClick={clearSchedule} className="text-[10px] font-bold text-gray-700 uppercase tracking-widest hover:text-red-500 transition-colors">Reset App Data</button>
-                </div>
               </div>
             ) : (
               <div className="animate-in fade-in slide-in-from-right-4 duration-300">
