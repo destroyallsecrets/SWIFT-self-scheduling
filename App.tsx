@@ -104,7 +104,8 @@ const App: React.FC = () => {
         </div>
       </header>
 
-      <main className="max-w-3xl mx-auto px-5 py-6 space-y-8 flex-grow w-full overflow-x-hidden">
+      {/* Main Content Area with optimized padding for bottom nav clearance */}
+      <main className="max-w-3xl mx-auto px-5 pt-6 pb-44 space-y-8 flex-grow w-full overflow-x-hidden">
         
         {currentView === 'SCHEDULE' && (
           <>
@@ -127,11 +128,10 @@ const App: React.FC = () => {
             {scheduleTab === 'UPCOMING' ? (
               <div className="animate-in fade-in slide-in-from-left-4 duration-300">
                 <section className="mb-8">
-                  {/* Pass upcomingShifts to reflect the projected income of what is shown below */}
                   <FinancialSummary shifts={upcomingShifts} />
                 </section>
 
-                <section className="space-y-8 pb-12">
+                <section className="space-y-8">
                   {upcomingShifts.length === 0 ? (
                     <div className="text-center py-20 px-6 bg-wish-900 border border-wish-800 rounded-[2.5rem]">
                       <div className="text-5xl mb-6 grayscale opacity-50">🗓️</div>
@@ -170,7 +170,7 @@ const App: React.FC = () => {
                  </div>
 
                  {pastShifts.length > 0 && (
-                   <div className="space-y-4 pb-12">
+                   <div className="space-y-4">
                      <div className="flex items-center gap-4 mb-4 mt-8">
                         <h2 className="text-xs font-black text-gray-600 uppercase tracking-[0.2em]">
                           Past Shift Log
@@ -203,9 +203,9 @@ const App: React.FC = () => {
 
       </main>
 
-      {/* Modern Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 glass border-t border-wish-700/50 pb-safe z-40">
-        <div className="max-w-3xl mx-auto flex justify-around px-4 pt-3 pb-2">
+      {/* Modern Bottom Navigation with increased separation and shadow */}
+      <nav className="fixed bottom-0 left-0 right-0 glass border-t border-wish-700 shadow-[0_-8px_30px_rgb(0,0,0,0.5)] pb-safe z-40">
+        <div className="max-w-3xl mx-auto flex justify-around px-4 pt-4 pb-3">
           <button 
             onClick={() => setCurrentView('SCHEDULE')}
             className={`flex flex-col items-center gap-1.5 p-2 w-full transition-all duration-300 ${currentView === 'SCHEDULE' ? 'text-wish-accent' : 'text-gray-600'}`}
@@ -240,7 +240,7 @@ const App: React.FC = () => {
 
       {/* Notification Toast */}
       {notification && (
-        <div className="fixed bottom-28 left-4 right-4 z-50 animate-in slide-in-from-bottom-10 duration-500">
+        <div className="fixed bottom-32 left-4 right-4 z-50 animate-in slide-in-from-bottom-10 duration-500">
           <div className="bg-emerald-500 text-white px-6 py-4 rounded-3xl shadow-2xl shadow-emerald-500/20 text-center font-bold text-sm">
             {notification}
           </div>

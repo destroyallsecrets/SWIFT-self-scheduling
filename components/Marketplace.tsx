@@ -42,7 +42,7 @@ const Marketplace: React.FC<MarketplaceProps> = ({ onNotify }) => {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 w-full pb-10">
       <div className="bg-gradient-to-r from-wish-800 to-wish-900 p-4 rounded-xl border border-wish-700 mb-6">
         <h2 className="text-xl font-bold text-white mb-1">Find Work</h2>
         <p className="text-sm text-gray-400">Browse and request upcoming shifts at venues near you.</p>
@@ -55,15 +55,17 @@ const Marketplace: React.FC<MarketplaceProps> = ({ onNotify }) => {
           <p className="text-gray-400">Check back later for new opportunities.</p>
         </div>
       ) : (
-        shifts.map(shift => (
-          <ShiftCard 
-            key={shift.id} 
-            shift={shift} 
-            actionType="REQUEST"
-            isLoading={processingId === shift.id}
-            onAction={handleRequest}
-          />
-        ))
+        <div className="space-y-4">
+          {shifts.map(shift => (
+            <ShiftCard 
+              key={shift.id} 
+              shift={shift} 
+              actionType="REQUEST"
+              isLoading={processingId === shift.id}
+              onAction={handleRequest}
+            />
+          ))}
+        </div>
       )}
     </div>
   );
