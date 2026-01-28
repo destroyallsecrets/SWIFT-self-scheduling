@@ -60,7 +60,7 @@ This application is a conceptual prototype developed to demonstrate modernized w
 
 ## 🔗 Links
 
-- **Repository:** [https://github.com/OutsideWeStandEternally](https://github.com/OutsideWeStandEternally)
+- **Repository:** [https://github.com/destroyallsecrets](https://github.com/destroyallsecrets?)
 
 ---
 *Disclaimer: This is a conceptual tool and is not an official product of Contemporary Services Corporation. All trademarks belong to their respective owners.*
