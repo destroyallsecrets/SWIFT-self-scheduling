@@ -4,11 +4,11 @@ import { groupShiftsByMonthAndWeek } from '../utils/calculations';
 
 interface IncomeHistoryProps {
   shifts: Shift[];
+  taxRate: number;
 }
 
-const IncomeHistory: React.FC<IncomeHistoryProps> = ({ shifts }) => {
-  const monthlyData = groupShiftsByMonthAndWeek(shifts);
-  const totalLifetime = shifts.reduce((acc, curr) => acc + (curr.status === 'COMPLETED' || curr.status === 'CONFIRMED' ? 1 : 0), 0);
+const IncomeHistory: React.FC<IncomeHistoryProps> = ({ shifts, taxRate }) => {
+  const monthlyData = groupShiftsByMonthAndWeek(shifts, taxRate);
 
   if (shifts.length === 0) {
     return (
@@ -22,20 +22,17 @@ const IncomeHistory: React.FC<IncomeHistoryProps> = ({ shifts }) => {
     <div className="space-y-6">
       {monthlyData.map((month) => (
         <div key={month.monthLabel} className="bg-wish-800 border border-wish-700/50 rounded-2xl overflow-hidden animate-in fade-in duration-500">
-          
-          {/* Month Header */}
           <div className="bg-wish-900/80 p-5 flex justify-between items-center border-b border-wish-700/50">
             <div>
               <h3 className="text-white font-bold text-lg">{month.monthLabel}</h3>
-              <p className="text-xs text-gray-500 font-medium uppercase tracking-wider">{month.shifts.length} Shifts Completed</p>
+              <p className="text-xs text-gray-500 font-medium uppercase tracking-wider">{month.shifts.length} Shifts Recorded</p>
             </div>
             <div className="text-right">
                <span className="text-2xl font-black text-white block">${month.earnings.net.toFixed(2)}</span>
-               <span className="text-[10px] text-wish-success font-bold uppercase tracking-widest">Total Net</span>
+               <span className="text-[10px] text-wish-success font-bold uppercase tracking-widest">Net Earned</span>
             </div>
           </div>
 
-          {/* Weekly / Payday Breakdown */}
           <div className="divide-y divide-wish-700/30">
             {month.weeks.map((week) => (
               <div key={week.label} className="p-4 flex justify-between items-center hover:bg-white/5 transition-colors">
@@ -45,12 +42,12 @@ const IncomeHistory: React.FC<IncomeHistoryProps> = ({ shifts }) => {
                   </div>
                   <div>
                     <p className="text-sm font-bold text-gray-200">{week.label}</p>
-                    <p className="text-[10px] text-gray-500 font-mono">{week.earnings.hours.toFixed(1)} hrs • {week.shifts.length} shifts</p>
+                    <p className="text-[10px] text-gray-500 font-mono tracking-tighter">{week.earnings.hours.toFixed(1)} hrs • {week.shifts.length} shifts</p>
                   </div>
                 </div>
                 <div className="text-right">
                   <span className="text-sm font-bold text-wish-success font-mono block">+${week.earnings.net.toFixed(2)}</span>
-                  <span className="text-[10px] text-gray-600 font-medium">PAYOUT</span>
+                  <span className="text-[10px] text-gray-600 font-medium tracking-widest">PAYOUT</span>
                 </div>
               </div>
             ))}

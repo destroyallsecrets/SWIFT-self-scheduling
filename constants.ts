@@ -2,20 +2,46 @@ import { TaxRates } from './types';
 
 export const HOURLY_RATE = 13.50;
 
-// 2026 Tax Rates (Indianapolis/Marion County)
-export const TAX_RATES: TaxRates = {
-  federal: 0.10,        // 10% Bracket Estimate
-  socialSecurity: 0.062, // 6.2%
-  medicare: 0.0145,      // 1.45%
-  state: 0.0295,         // Indiana 2.95% (2026 reduced)
-  local: 0.0202          // Marion County 2.02%
-};
+export interface CityTaxPreset {
+  name: string;
+  totalRate: number;
+  description: string;
+}
 
-export const TOTAL_TAX_RATE = 
-  TAX_RATES.federal + 
-  TAX_RATES.socialSecurity + 
-  TAX_RATES.medicare + 
-  TAX_RATES.state + 
-  TAX_RATES.local; // ~0.2262
+// Estimates for CSC typical operational cities (Federal + FICA + State + Local)
+export const CITY_TAX_PRESETS: CityTaxPreset[] = [
+  { 
+    name: "Indianapolis, IN", 
+    totalRate: 0.2262, 
+    description: "Marion Co (2.02%) + IN State (2.95%)" 
+  },
+  { 
+    name: "Chicago, IL", 
+    totalRate: 0.2650, 
+    description: "Cook Co + IL State (4.95%)" 
+  },
+  { 
+    name: "Nashville, TN", 
+    totalRate: 0.1765, 
+    description: "No State Income Tax (Federal/FICA only)" 
+  },
+  { 
+    name: "Louisville, KY", 
+    totalRate: 0.2415, 
+    description: "Jefferson Co (2.2%) + KY State (4.0%)" 
+  },
+  { 
+    name: "Cincinnati, OH", 
+    totalRate: 0.2375, 
+    description: "City Tax (2.1%) + OH State (2.75%)" 
+  },
+  { 
+    name: "Columbus, OH", 
+    totalRate: 0.2450, 
+    description: "City Tax (2.5%) + OH State (2.75%)" 
+  }
+];
 
+export const DEFAULT_TAX_RATE = CITY_TAX_PRESETS[0].totalRate;
 export const LOCAL_STORAGE_KEY = 'swift_app_schedule_v1';
+export const TAX_STORAGE_KEY = 'swift_app_tax_settings';

@@ -1,4 +1,13 @@
 export type ShiftStatus = 'AVAILABLE' | 'REQUESTED' | 'CONFIRMED' | 'COMPLETED';
+export type UserRole = 'MANAGER' | 'STAFF';
+
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  role: UserRole;
+  password?: string; // Only for local dev auth
+}
 
 export interface Shift {
   id: string;
@@ -9,6 +18,13 @@ export interface Shift {
   address: string;
   status: ShiftStatus;
   source?: 'MANUAL' | 'OCR' | 'MARKETPLACE';
+  assignedTo?: string; // User ID
+  postedBy?: string; // Manager User ID
+}
+
+export interface AuthSession {
+  user: User;
+  token: string;
 }
 
 export interface TaxRates {

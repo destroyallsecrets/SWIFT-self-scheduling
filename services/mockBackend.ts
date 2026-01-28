@@ -1,121 +1,138 @@
-import { Shift } from '../types';
+import { Shift, User, UserRole, AuthSession } from '../types';
 
-const DB_KEY = 'swift_backend_db_v1';
+const SHIFTS_KEY = 'swift_dev_shifts_v2';
+const USERS_KEY = 'swift_dev_users_v2';
+const SESSION_KEY = 'swift_dev_session';
 
-// Initial seed data to populate the marketplace if empty
-const SEED_DATA: Shift[] = [
-  {
-    id: 'seed-1',
-    startDate: '2026-05-15T16:00:00.000Z',
-    endDate: '2026-05-15T23:00:00.000Z',
-    jobName: 'Concession Stand Lead',
-    venueName: 'Lucas Oil Stadium',
-    address: '500 S Capitol Ave, Indianapolis, IN',
-    status: 'AVAILABLE',
-    source: 'MARKETPLACE'
-  },
-  {
-    id: 'seed-2',
-    startDate: '2026-05-16T10:00:00.000Z',
-    endDate: '2026-05-16T18:00:00.000Z',
-    jobName: 'Ticket Scanner',
-    venueName: 'Gainbridge Fieldhouse',
-    address: '125 S Pennsylvania St, Indianapolis, IN',
-    status: 'AVAILABLE',
-    source: 'MARKETPLACE'
-  },
-  {
-    id: 'seed-3',
-    startDate: '2026-05-20T17:00:00.000Z',
-    endDate: '2026-05-20T22:00:00.000Z',
-    jobName: 'Event Security',
-    venueName: 'TCU Amphitheater',
-    address: '801 W Washington St, Indianapolis, IN',
-    status: 'AVAILABLE',
-    source: 'MARKETPLACE'
-  }
+// Default system users for development
+const INITIAL_USERS: User[] = [
+  { id: 'u-1', name: 'Dev Manager', email: 'manager@csc.com', role: 'MANAGER', password: 'password123' },
+  { id: 'u-2', name: 'Dev Staff', email: 'staff@csc.com', role: 'STAFF', password: 'password123' }
 ];
 
-const loadDb = (): Shift[] => {
-  const stored = localStorage.getItem(DB_KEY);
+const loadUsers = (): User[] => {
+  const stored = localStorage.getItem(USERS_KEY);
   if (!stored) {
-    localStorage.setItem(DB_KEY, JSON.stringify(SEED_DATA));
-    return SEED_DATA;
+    localStorage.setItem(USERS_KEY, JSON.stringify(INITIAL_USERS));
+    return INITIAL_USERS;
   }
   return JSON.parse(stored);
 };
 
-const saveDb = (shifts: Shift[]) => {
-  localStorage.setItem(DB_KEY, JSON.stringify(shifts));
+const loadShifts = (): Shift[] => {
+  const stored = localStorage.getItem(SHIFTS_KEY);
+  return stored ? JSON.parse(stored) : [];
+};
+
+const saveShifts = (shifts: Shift[]) => {
+  localStorage.setItem(SHIFTS_KEY, JSON.stringify(shifts));
 };
 
 export const MockBackend = {
+  // --- AUTH METHODS ---
+  
+  login: async (email: string, password: string): Promise<AuthSession> => {
+    await new Promise(r => setTimeout(r, 600)); // Simulate network latency
+    const users = loadUsers();
+    const user = users.find(u => u.email === email && u.password === password);
+    
+    if (!user) throw new Error("Invalid credentials");
+    
+    const session: AuthSession = { 
+      user: { ...user, password: undefined }, 
+      token: `dev-token-${user.id}-${Date.now()}` 
+    };
+    localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+    return session;
+  },
+
+  getSession: (): AuthSession | null => {
+    const stored = localStorage.getItem(SESSION_KEY);
+    return stored ? JSON.parse(stored) : null;
+  },
+
+  logout: () => {
+    localStorage.removeItem(SESSION_KEY);
+  },
+
   // --- USER METHODS ---
 
-  getMySchedule: async (): Promise<Shift[]> => {
-    // Returns shifts that are confirmed (owned by user) or manually added
-    const all = loadDb();
-    return all.filter(s => s.status === 'CONFIRMED' || s.source === 'MANUAL' || s.source === 'OCR');
+  getMySchedule: async (userId: string): Promise<Shift[]> => {
+    const all = loadShifts();
+    return all.filter(s => s.assignedTo === userId || s.source === 'MANUAL' || s.source === 'OCR');
   },
 
   getAvailableShifts: async (): Promise<Shift[]> => {
-    // Returns shifts available in the marketplace
-    const all = loadDb();
-    return all.filter(s => s.status === 'AVAILABLE');
+    const all = loadShifts();
+    return all.filter(s => s.status === 'AVAILABLE' && !s.assignedTo);
   },
 
-  requestShift: async (shiftId: string): Promise<void> => {
-    const all = loadDb();
-    const updated = all.map(s => s.id === shiftId ? { ...s, status: 'REQUESTED' as const } : s);
-    saveDb(updated);
-    // Simulate network delay
+  claimShift: async (shiftId: string, userId: string): Promise<void> => {
+    const all = loadShifts();
+    const updated = all.map(s => 
+      s.id === shiftId ? { ...s, status: 'REQUESTED' as const, assignedTo: userId } : s
+    );
+    saveShifts(updated);
     await new Promise(r => setTimeout(r, 400));
   },
 
-  // --- EMPLOYER METHODS ---
+  addPersonalShift: async (shift: Omit<Shift, 'id' | 'status' | 'source'>, userId: string): Promise<void> => {
+    const all = loadShifts();
+    const newShift: Shift = {
+      ...shift,
+      id: crypto.randomUUID(),
+      status: 'CONFIRMED',
+      source: 'MANUAL',
+      assignedTo: userId
+    };
+    saveShifts([...all, newShift]);
+  },
 
-  postShift: async (shift: Omit<Shift, 'id' | 'status' | 'source'>): Promise<void> => {
-    const all = loadDb();
+  // --- MANAGER/ADMIN METHODS ---
+
+  postMarketplaceShift: async (shift: Omit<Shift, 'id' | 'status' | 'source'>, managerId: string): Promise<void> => {
+    const all = loadShifts();
     const newShift: Shift = {
       ...shift,
       id: crypto.randomUUID(),
       status: 'AVAILABLE',
-      source: 'MARKETPLACE'
+      source: 'MARKETPLACE',
+      postedBy: managerId
     };
-    saveDb([...all, newShift]);
+    saveShifts([...all, newShift]);
     await new Promise(r => setTimeout(r, 400));
   },
 
-  getEmployerShifts: async (): Promise<Shift[]> => {
-    const all = loadDb();
-    // Employers see everything they put in the marketplace, plus status
-    return all.filter(s => s.source === 'MARKETPLACE');
+  getManagerOverview: async (managerId: string): Promise<Shift[]> => {
+    const all = loadShifts();
+    return all.filter(s => s.postedBy === managerId || s.source === 'MARKETPLACE');
   },
 
-  approveRequest: async (shiftId: string): Promise<void> => {
-    const all = loadDb();
-    const updated = all.map(s => s.id === shiftId ? { ...s, status: 'CONFIRMED' as const } : s);
-    saveDb(updated);
+  approveWorker: async (shiftId: string): Promise<void> => {
+    const all = loadShifts();
+    const updated = all.map(s => 
+      s.id === shiftId ? { ...s, status: 'CONFIRMED' as const } : s
+    );
+    saveShifts(updated);
     await new Promise(r => setTimeout(r, 400));
   },
 
   // --- SYSTEM METHODS ---
   
-  // Used when parsing OCR/Text to immediately add to schedule
-  syncManualShifts: async (newShifts: Shift[]): Promise<void> => {
-    const all = loadDb();
-    const existingIds = new Set(all.map(s => s.id));
-    const toAdd = newShifts.filter(s => !existingIds.has(s.id)).map(s => ({
+  syncManualShifts: async (newShifts: Shift[], userId: string): Promise<void> => {
+    const all = loadShifts();
+    const toAdd = newShifts.map(s => ({
       ...s,
+      id: s.id || crypto.randomUUID(),
       status: 'CONFIRMED' as const,
-      source: 'OCR' as const
+      source: 'OCR' as const,
+      assignedTo: userId
     }));
-    
-    saveDb([...all, ...toAdd]);
+    saveShifts([...all, ...toAdd]);
   },
 
   reset: () => {
-    localStorage.removeItem(DB_KEY);
-    loadDb(); // reseeds
+    localStorage.removeItem(SHIFTS_KEY);
+    localStorage.removeItem(SESSION_KEY);
   }
 };

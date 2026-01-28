@@ -1,18 +1,26 @@
 import React, { useState, useEffect } from 'react';
-import { Shift } from '../types';
+import { Shift, User } from '../types';
 import { MockBackend } from '../services/mockBackend';
 import ShiftCard from './ShiftCard';
 
 interface EmployerDashboardProps {
   onNotify: (msg: string) => void;
+  user: User;
 }
 
-const EmployerDashboard: React.FC<EmployerDashboardProps> = ({ onNotify }) => {
+const PRESET_ASSIGNMENTS = [
+  "Outside",
+  "Main Staff",
+  "Suites",
+  "Event Level"
+];
+
+const EmployerDashboard: React.FC<EmployerDashboardProps> = ({ onNotify, user }) => {
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [activeTab, setActiveTab] = useState<'create' | 'requests'>('create');
   
   // Form State
-  const [jobName, setJobName] = useState('Event Staff');
+  const [jobName, setJobName] = useState('Main Staff');
   const [venueName, setVenueName] = useState('Lucas Oil Stadium');
   const [date, setDate] = useState('2026-06-01');
   const [startTime, setStartTime] = useState('17:00');
@@ -20,38 +28,39 @@ const EmployerDashboard: React.FC<EmployerDashboardProps> = ({ onNotify }) => {
   const [submitting, setSubmitting] = useState(false);
 
   const fetchShifts = async () => {
-    const data = await MockBackend.getEmployerShifts();
+    const data = await MockBackend.getManagerOverview(user.id);
     setShifts(data.sort((a,b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime()));
   };
 
   useEffect(() => {
     fetchShifts();
-  }, []);
+  }, [user.id]);
 
   const handleCreateShift = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (user.role !== 'MANAGER') {
+      onNotify('Manager permissions required');
+      return;
+    }
     setSubmitting(true);
 
     const start = new Date(`${date}T${startTime}:00`);
     const end = new Date(`${date}T${endTime}:00`);
 
-    // Handle overnight shifts roughly
     if (end < start) {
       end.setDate(end.getDate() + 1);
     }
 
     try {
-      await MockBackend.postShift({
+      await MockBackend.postMarketplaceShift({
         startDate: start.toISOString(),
         endDate: end.toISOString(),
-        jobName,
+        jobName: `Security: ${jobName}`,
         venueName,
-        address: 'Indianapolis, IN' // Simplified for demo
-      });
-      onNotify('Shift Posted to Marketplace');
+        address: 'Indianapolis, IN'
+      }, user.id);
+      onNotify('Security Posting Published');
       fetchShifts();
-      // Reset form slightly
-      setJobName('Event Staff');
     } catch (err) {
       console.error(err);
     } finally {
@@ -60,51 +69,84 @@ const EmployerDashboard: React.FC<EmployerDashboardProps> = ({ onNotify }) => {
   };
 
   const handleApprove = async (shift: Shift) => {
-    await MockBackend.approveRequest(shift.id);
-    onNotify(`Approved ${shift.jobName} for user`);
+    await MockBackend.approveWorker(shift.id);
+    onNotify(`Approved for ${shift.jobName}`);
     fetchShifts();
   };
 
   const pendingRequests = shifts.filter(s => s.status === 'REQUESTED');
   const activeShifts = shifts.filter(s => s.status === 'AVAILABLE' || s.status === 'CONFIRMED');
 
+  if (user.role !== 'MANAGER') {
+    return (
+      <div className="text-center py-20 bg-wish-900 border border-wish-800 rounded-[3rem] p-10">
+        <div className="text-4xl mb-4">🚫</div>
+        <h2 className="text-white font-black text-xl mb-2">Access Restricted</h2>
+        <p className="text-gray-500 text-sm">The Admin panel is reserved for Managers. Please contact your supervisor for deployment access.</p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
-      <div className="bg-wish-800 p-1 rounded-lg flex text-sm font-medium">
+      <div className="bg-wish-800 p-1.5 rounded-2xl flex text-xs font-bold border border-wish-700 shadow-inner">
         <button 
           onClick={() => setActiveTab('create')}
-          className={`flex-1 py-2 rounded-md transition-all ${activeTab === 'create' ? 'bg-wish-700 text-white shadow' : 'text-gray-400 hover:text-white'}`}
+          className={`flex-1 py-3 rounded-xl transition-all ${activeTab === 'create' ? 'bg-wish-700 text-white shadow-lg border border-wish-600' : 'text-gray-500 hover:text-white'}`}
         >
-          Post New Shift
+          Dispatch Gigs
         </button>
         <button 
           onClick={() => setActiveTab('requests')}
-          className={`flex-1 py-2 rounded-md transition-all ${activeTab === 'requests' ? 'bg-wish-700 text-white shadow' : 'text-gray-400 hover:text-white'}`}
+          className={`flex-1 py-3 rounded-xl transition-all relative ${activeTab === 'requests' ? 'bg-wish-700 text-white shadow-lg border border-wish-600' : 'text-gray-500 hover:text-white'}`}
         >
-          Approvals {pendingRequests.length > 0 && <span className="ml-2 bg-red-500 text-white px-1.5 rounded-full text-xs">{pendingRequests.length}</span>}
+          Approvals 
+          {pendingRequests.length > 0 && (
+            <span className="absolute -top-1 -right-1 bg-red-500 text-white w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-black border-2 border-wish-950">
+              {pendingRequests.length}
+            </span>
+          )}
         </button>
       </div>
 
       {activeTab === 'create' && (
-        <div className="bg-wish-900 border border-wish-700 rounded-xl p-6">
-          <h2 className="text-lg font-bold text-white mb-4">Create New Shift Opportunity</h2>
-          <form onSubmit={handleCreateShift} className="space-y-4">
-            <div>
-              <label className="block text-xs text-gray-400 mb-1">Role / Job Title</label>
+        <div className="bg-wish-900 border border-wish-800 rounded-[2.5rem] p-6 animate-in fade-in slide-in-from-bottom-4">
+          <div className="mb-6">
+            <h2 className="text-xl font-black text-white tracking-tight">Post Security Detail</h2>
+            <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-1">Operational Workforce Management</p>
+          </div>
+
+          <form onSubmit={handleCreateShift} className="space-y-6">
+            <div className="space-y-3">
+              <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-2">Sector Assignment</label>
+              <div className="grid grid-cols-2 gap-2">
+                {PRESET_ASSIGNMENTS.map(role => (
+                  <button 
+                    key={role}
+                    type="button"
+                    onClick={() => setJobName(role)}
+                    className={`py-3 rounded-xl text-xs font-bold border transition-all ${jobName === role ? 'bg-wish-accent/20 border-wish-accent text-white' : 'bg-wish-800 border-wish-700 text-gray-500 hover:border-gray-600'}`}
+                  >
+                    {role}
+                  </button>
+                ))}
+              </div>
               <input 
                 type="text" 
                 required
                 value={jobName}
                 onChange={e => setJobName(e.target.value)}
-                className="w-full bg-wish-800 border border-wish-700 rounded p-2 text-white focus:border-wish-accent outline-none"
+                className="w-full bg-wish-800 border border-wish-700 rounded-2xl p-4 text-white focus:border-wish-accent outline-none font-bold"
+                placeholder="Custom sector name..."
               />
             </div>
-            <div>
-              <label className="block text-xs text-gray-400 mb-1">Venue</label>
+
+            <div className="space-y-3">
+              <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-2">Venue Location</label>
               <select 
                 value={venueName}
                 onChange={e => setVenueName(e.target.value)}
-                className="w-full bg-wish-800 border border-wish-700 rounded p-2 text-white focus:border-wish-accent outline-none"
+                className="w-full bg-wish-800 border border-wish-700 rounded-2xl p-4 text-white font-bold focus:border-wish-accent outline-none appearance-none cursor-pointer"
               >
                 <option>Lucas Oil Stadium</option>
                 <option>Gainbridge Fieldhouse</option>
@@ -113,55 +155,60 @@ const EmployerDashboard: React.FC<EmployerDashboardProps> = ({ onNotify }) => {
                 <option>Victory Field</option>
               </select>
             </div>
-            <div className="grid grid-cols-3 gap-3">
-              <div className="col-span-1">
-                <label className="block text-xs text-gray-400 mb-1">Date</label>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-wish-950/50 p-4 rounded-3xl border border-wish-800">
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black text-gray-600 uppercase tracking-widest ml-1">Date</label>
                 <input 
                   type="date" 
                   required
                   value={date}
                   onChange={e => setDate(e.target.value)}
-                  className="w-full bg-wish-800 border border-wish-700 rounded p-2 text-white text-sm focus:border-wish-accent outline-none"
+                  className="w-full bg-wish-800 border border-wish-700 rounded-xl p-3 text-white text-xs focus:border-wish-accent outline-none"
                 />
               </div>
-              <div className="col-span-1">
-                <label className="block text-xs text-gray-400 mb-1">Start</label>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black text-gray-600 uppercase tracking-widest ml-1">Start (24h)</label>
                 <input 
                   type="time" 
                   required
                   value={startTime}
                   onChange={e => setStartTime(e.target.value)}
-                  className="w-full bg-wish-800 border border-wish-700 rounded p-2 text-white text-sm focus:border-wish-accent outline-none"
+                  className="w-full bg-wish-800 border border-wish-700 rounded-xl p-3 text-white text-xs focus:border-wish-accent outline-none"
                 />
               </div>
-              <div className="col-span-1">
-                <label className="block text-xs text-gray-400 mb-1">End</label>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black text-gray-600 uppercase tracking-widest ml-1">End (24h)</label>
                 <input 
                   type="time" 
                   required
                   value={endTime}
                   onChange={e => setEndTime(e.target.value)}
-                  className="w-full bg-wish-800 border border-wish-700 rounded p-2 text-white text-sm focus:border-wish-accent outline-none"
+                  className="w-full bg-wish-800 border border-wish-700 rounded-xl p-3 text-white text-xs focus:border-wish-accent outline-none"
                 />
               </div>
             </div>
+
             <button 
               type="submit" 
               disabled={submitting}
-              className="w-full bg-wish-accent hover:bg-indigo-600 text-white font-bold py-3 rounded-lg mt-4"
+              className="w-full bg-wish-accent hover:bg-indigo-600 text-white font-black py-5 rounded-[2rem] text-sm shadow-xl shadow-indigo-500/20 active:scale-[0.98] transition-all uppercase tracking-widest"
             >
-              {submitting ? 'Posting...' : 'Post Shift'}
+              {submitting ? 'Broadcasting...' : 'Publish to Marketplace'}
             </button>
           </form>
 
-          <div className="mt-8 border-t border-wish-800 pt-6">
-            <h3 className="text-gray-400 text-sm font-semibold mb-3 uppercase">Recently Posted</h3>
-            <div className="space-y-2 max-h-64 overflow-y-auto">
-              {activeShifts.length === 0 ? <p className="text-gray-600 italic text-sm">No active shifts.</p> : 
-                activeShifts.slice(-5).reverse().map(shift => (
-                  <div key={shift.id} className="text-xs p-3 bg-wish-800 rounded border border-wish-700 flex justify-between">
-                    <span className="text-gray-300">{shift.jobName} @ {shift.venueName}</span>
-                    <span className={`px-2 rounded ${shift.status === 'CONFIRMED' ? 'text-green-400 bg-green-900/20' : 'text-blue-400 bg-blue-900/20'}`}>
+          <div className="mt-10 border-t border-wish-800 pt-8">
+            <h3 className="text-gray-500 text-[10px] font-black mb-4 uppercase tracking-[0.2em]">Deployment History</h3>
+            <div className="space-y-3 max-h-64 overflow-y-auto no-scrollbar">
+              {activeShifts.length === 0 ? <p className="text-gray-600 italic text-xs text-center py-4">No security details active.</p> : 
+                activeShifts.slice(-8).reverse().map(shift => (
+                  <div key={shift.id} className="text-[11px] p-4 bg-wish-800/50 rounded-2xl border border-wish-800 flex justify-between items-center group hover:border-wish-700 transition-colors">
+                    <div className="flex flex-col">
+                       <span className="text-white font-bold">{shift.jobName}</span>
+                       <span className="text-gray-500 text-[9px] uppercase font-black tracking-tighter mt-0.5">{shift.venueName}</span>
+                    </div>
+                    <span className={`px-2.5 py-1 rounded-lg font-black text-[9px] tracking-widest uppercase border ${shift.status === 'CONFIRMED' ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' : 'text-blue-400 bg-blue-500/10 border-blue-500/20'}`}>
                       {shift.status}
                     </span>
                   </div>
@@ -173,10 +220,11 @@ const EmployerDashboard: React.FC<EmployerDashboardProps> = ({ onNotify }) => {
       )}
 
       {activeTab === 'requests' && (
-        <div className="space-y-4">
+        <div className="space-y-4 animate-in fade-in slide-in-from-right-4">
            {pendingRequests.length === 0 ? (
-             <div className="text-center py-12 bg-wish-900 border border-wish-800 rounded-xl">
-               <p className="text-gray-500">No pending requests from workers.</p>
+             <div className="text-center py-20 bg-wish-900 border border-wish-800 rounded-[3rem] flex flex-col items-center">
+               <div className="w-16 h-16 bg-wish-800/50 rounded-full flex items-center justify-center text-3xl mb-4">👮</div>
+               <p className="text-gray-500 font-bold uppercase text-[10px] tracking-widest">No pending staff requests</p>
              </div>
            ) : (
              pendingRequests.map(shift => (
@@ -185,6 +233,7 @@ const EmployerDashboard: React.FC<EmployerDashboardProps> = ({ onNotify }) => {
                  shift={shift} 
                  actionType="APPROVE"
                  onAction={handleApprove}
+                 taxRate={0.22} 
                />
              ))
            )}

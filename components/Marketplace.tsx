@@ -5,9 +5,11 @@ import ShiftCard from './ShiftCard';
 
 interface MarketplaceProps {
   onNotify: (msg: string) => void;
+  taxRate: number;
+  userId: string;
 }
 
-const Marketplace: React.FC<MarketplaceProps> = ({ onNotify }) => {
+const Marketplace: React.FC<MarketplaceProps> = ({ onNotify, taxRate, userId }) => {
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [loading, setLoading] = useState(false);
   const [processingId, setProcessingId] = useState<string | null>(null);
@@ -15,7 +17,6 @@ const Marketplace: React.FC<MarketplaceProps> = ({ onNotify }) => {
   const loadShifts = async () => {
     setLoading(true);
     const data = await MockBackend.getAvailableShifts();
-    // Sort by date soonest first
     setShifts(data.sort((a,b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime()));
     setLoading(false);
   };
@@ -27,9 +28,9 @@ const Marketplace: React.FC<MarketplaceProps> = ({ onNotify }) => {
   const handleRequest = async (shift: Shift) => {
     setProcessingId(shift.id);
     try {
-      await MockBackend.requestShift(shift.id);
-      onNotify('Shift Requested! Waiting for employer approval.');
-      loadShifts(); // Refresh list to remove the requested item or change its status
+      await MockBackend.claimShift(shift.id, userId);
+      onNotify('Shift Claimed! Waiting for approval.');
+      loadShifts();
     } catch (e) {
       console.error(e);
     } finally {
@@ -38,21 +39,21 @@ const Marketplace: React.FC<MarketplaceProps> = ({ onNotify }) => {
   };
 
   if (loading && shifts.length === 0) {
-    return <div className="text-center text-gray-500 py-10">Loading opportunities...</div>;
+    return <div className="text-center text-gray-500 py-10 font-bold uppercase tracking-widest text-xs animate-pulse">Checking Assignment Board...</div>;
   }
 
   return (
     <div className="space-y-4 w-full pb-10">
-      <div className="bg-gradient-to-r from-wish-800 to-wish-900 p-4 rounded-xl border border-wish-700 mb-6">
-        <h2 className="text-xl font-bold text-white mb-1">Find Work</h2>
-        <p className="text-sm text-gray-400">Browse and request upcoming shifts at venues near you.</p>
+      <div className="bg-gradient-to-r from-wish-800 to-wish-900 p-6 rounded-[2rem] border border-wish-700 mb-6">
+        <h2 className="text-xl font-black text-white mb-1">Self-Scheduling</h2>
+        <p className="text-xs text-gray-400 font-medium">Claim open security assignments at CSC venues.</p>
       </div>
 
       {shifts.length === 0 ? (
-        <div className="text-center py-12 px-4 border-2 border-dashed border-wish-800 rounded-2xl">
-          <div className="text-4xl mb-4 grayscale">🏟️</div>
-          <h3 className="text-lg font-semibold text-white mb-2">No Open Shifts</h3>
-          <p className="text-gray-400">Check back later for new opportunities.</p>
+        <div className="text-center py-20 px-4 border-2 border-dashed border-wish-800 rounded-[3rem]">
+          <div className="text-4xl mb-4">👮</div>
+          <h3 className="text-lg font-black text-white mb-2">Fully Staffed</h3>
+          <p className="text-gray-500 text-sm">All current security details are currently filled.</p>
         </div>
       ) : (
         <div className="space-y-4">
@@ -63,6 +64,7 @@ const Marketplace: React.FC<MarketplaceProps> = ({ onNotify }) => {
               actionType="REQUEST"
               isLoading={processingId === shift.id}
               onAction={handleRequest}
+              taxRate={taxRate}
             />
           ))}
         </div>
