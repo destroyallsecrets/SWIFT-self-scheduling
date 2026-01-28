@@ -1,5 +1,3 @@
-https://swiftselfschedule.com
-
 # SWIFT: Schedule, Wages, Income, Financial Tracker
 
 **A Self-Scheduling Concept for CSC Security Operations**
@@ -60,7 +58,7 @@ This application is a conceptual prototype developed to demonstrate modernized w
 
 ## 🔗 Links
 
-- **Repository:** [https://github.com/destroyallsecrets](https://github.com/destroyallsecrets?)
+- **Repository:** [https://github.com/OutsideWeStandEternally](https://github.com/OutsideWeStandEternally)
 
 ---
 *Disclaimer: This is a conceptual tool and is not an official product of Contemporary Services Corporation. All trademarks belong to their respective owners.*
