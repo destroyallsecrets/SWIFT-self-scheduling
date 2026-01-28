@@ -9,9 +9,11 @@ import Marketplace from './components/Marketplace';
 import EmployerDashboard from './components/EmployerDashboard';
 import Login from './components/Login';
 import { DEFAULT_TAX_RATE, TAX_STORAGE_KEY } from './constants';
+import { calculateDurationHours, calculateEarnings } from './utils/calculations';
 
 type View = 'SCHEDULE' | 'SELF_SCHEDULE' | 'EMPLOYER';
 type ScheduleTab = 'UPCOMING' | 'HISTORY';
+type SortOption = 'date-desc' | 'date-asc' | 'earnings' | 'duration';
 
 const App: React.FC = () => {
   const [session, setSession] = useState<AuthSession | null>(MockBackend.getSession());
@@ -21,6 +23,13 @@ const App: React.FC = () => {
   const [showUploader, setShowUploader] = useState(false);
   const [notification, setNotification] = useState<string | null>(null);
   
+  // Filter/Sort State
+  const [showFilters, setShowFilters] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState<SortOption>('date-desc');
+  const [filterDateStart, setFilterDateStart] = useState('');
+  const [filterDateEnd, setFilterDateEnd] = useState('');
+
   const [taxRate, setTaxRate] = useState<number>(() => {
     const saved = localStorage.getItem(TAX_STORAGE_KEY);
     return saved ? parseFloat(saved) : DEFAULT_TAX_RATE;
@@ -29,7 +38,7 @@ const App: React.FC = () => {
   const refreshSchedule = async () => {
     if (!session?.user) return;
     const data = await MockBackend.getMySchedule(session.user.id);
-    setShifts(data.sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime()));
+    setShifts(data);
   };
 
   useEffect(() => {
@@ -68,21 +77,57 @@ const App: React.FC = () => {
     setCurrentView('SCHEDULE');
   };
 
-  const clearSchedule = () => {
-    if (window.confirm("Clear your entire local schedule and history?")) {
-      MockBackend.reset();
-      refreshSchedule();
-      handleNotify("Schedule Cleared");
-      setSession(null);
+  // Processing shifts based on filters and sort
+  const processedShifts = useMemo(() => {
+    let filtered = [...shifts];
+
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      filtered = filtered.filter(s => 
+        s.jobName.toLowerCase().includes(q) || 
+        s.venueName.toLowerCase().includes(q)
+      );
     }
-  };
+
+    if (filterDateStart) {
+      filtered = filtered.filter(s => new Date(s.startDate) >= new Date(filterDateStart));
+    }
+    if (filterDateEnd) {
+      filtered = filtered.filter(s => new Date(s.startDate) <= new Date(filterDateEnd));
+    }
+
+    filtered.sort((a, b) => {
+      switch (sortBy) {
+        case 'date-asc':
+          return new Date(a.startDate).getTime() - new Date(b.startDate).getTime();
+        case 'earnings':
+          const earnA = calculateEarnings(calculateDurationHours(a.startDate, a.endDate), taxRate).net;
+          const earnB = calculateEarnings(calculateDurationHours(b.startDate, b.endDate), taxRate).net;
+          return earnB - earnA;
+        case 'duration':
+          const durA = calculateDurationHours(a.startDate, a.endDate);
+          const durB = calculateDurationHours(b.startDate, b.endDate);
+          return durB - durA;
+        case 'date-desc':
+        default:
+          return new Date(b.startDate).getTime() - new Date(a.startDate).getTime();
+      }
+    });
+
+    return filtered;
+  }, [shifts, searchQuery, sortBy, filterDateStart, filterDateEnd, taxRate]);
 
   const { upcomingShifts, pastShifts } = useMemo(() => {
     const now = new Date();
-    const past = shifts.filter(s => new Date(s.endDate) < now).sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime());
-    const upcoming = shifts.filter(s => new Date(s.endDate) >= now);
+    const past = processedShifts.filter(s => new Date(s.endDate) < now);
+    const upcoming = processedShifts.filter(s => new Date(s.endDate) >= now);
+    
+    if (sortBy === 'date-desc' && scheduleTab === 'UPCOMING') {
+       upcoming.reverse(); 
+    }
+
     return { upcomingShifts: upcoming, pastShifts: past };
-  }, [shifts]);
+  }, [processedShifts, scheduleTab, sortBy]);
 
   const groupedUpcomingShifts = useMemo<{ [key: string]: Shift[] }>(() => {
     const groups: { [key: string]: Shift[] } = {};
@@ -128,10 +173,84 @@ const App: React.FC = () => {
       <main className="max-w-3xl mx-auto px-5 pt-6 pb-44 space-y-8 flex-grow w-full overflow-x-hidden">
         {currentView === 'SCHEDULE' && (
           <>
-            <div className="flex bg-wish-900/50 p-1 rounded-2xl border border-wish-800 backdrop-blur-sm shadow-inner">
-              <button onClick={() => setScheduleTab('UPCOMING')} className={`flex-1 py-3 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all ${scheduleTab === 'UPCOMING' ? 'bg-wish-800 text-white border border-wish-700/50' : 'text-gray-500'}`}>Upcoming</button>
-              <button onClick={() => setScheduleTab('HISTORY')} className={`flex-1 py-3 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all ${scheduleTab === 'HISTORY' ? 'bg-wish-800 text-white border border-wish-700/50' : 'text-gray-500'}`}>Archive</button>
+            <div className="flex items-center gap-2">
+              <div className="flex-grow flex bg-wish-900/50 p-1 rounded-2xl border border-wish-800 backdrop-blur-sm shadow-inner overflow-hidden">
+                <button onClick={() => setScheduleTab('UPCOMING')} className={`flex-1 py-3 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all ${scheduleTab === 'UPCOMING' ? 'bg-wish-800 text-white border border-wish-700/50' : 'text-gray-500'}`}>Upcoming</button>
+                <button onClick={() => setScheduleTab('HISTORY')} className={`flex-1 py-3 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all ${scheduleTab === 'HISTORY' ? 'bg-wish-800 text-white border border-wish-700/50' : 'text-gray-500'}`}>Archive</button>
+              </div>
+              
+              <button 
+                onClick={() => setShowFilters(!showFilters)}
+                className={`p-3 rounded-2xl border transition-all ${showFilters ? 'bg-wish-accent border-wish-accent text-white shadow-lg shadow-indigo-500/30' : 'bg-wish-900 border-wish-800 text-gray-500 hover:text-white'}`}
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                </svg>
+              </button>
             </div>
+
+            {showFilters && (
+              <div className="bg-wish-900/80 border border-wish-800 p-6 rounded-[2.5rem] space-y-5 animate-in slide-in-from-top-4 duration-300">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-2">Search Gigs</label>
+                    <input 
+                      type="text" 
+                      value={searchQuery}
+                      onChange={e => setSearchQuery(e.target.value)}
+                      placeholder="Search Job or Venue..."
+                      className="w-full bg-wish-800 border border-wish-700 rounded-xl p-3 text-xs text-white outline-none focus:border-wish-accent transition-all"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-2">Sort Order</label>
+                    <select 
+                      value={sortBy}
+                      onChange={e => setSortBy(e.target.value as SortOption)}
+                      className="w-full bg-wish-800 border border-wish-700 rounded-xl p-3 text-xs text-white outline-none focus:border-wish-accent transition-all appearance-none cursor-pointer"
+                    >
+                      <option value="date-desc">Newest First</option>
+                      <option value="date-asc">Oldest First</option>
+                      <option value="earnings">Highest Pay</option>
+                      <option value="duration">Longest Shift</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-2">From Date</label>
+                    <input 
+                      type="date" 
+                      value={filterDateStart}
+                      onChange={e => setFilterDateStart(e.target.value)}
+                      className="w-full bg-wish-800 border border-wish-700 rounded-xl p-3 text-xs text-white outline-none"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-2">To Date</label>
+                    <input 
+                      type="date" 
+                      value={filterDateEnd}
+                      onChange={e => setFilterDateEnd(e.target.value)}
+                      className="w-full bg-wish-800 border border-wish-700 rounded-xl p-3 text-xs text-white outline-none"
+                    />
+                  </div>
+                </div>
+
+                <button 
+                  onClick={() => {
+                    setSearchQuery('');
+                    setSortBy('date-desc');
+                    setFilterDateStart('');
+                    setFilterDateEnd('');
+                  }}
+                  className="w-full py-2 text-[10px] font-black text-gray-500 uppercase hover:text-red-400 transition-colors tracking-[0.2em]"
+                >
+                  Reset Filters
+                </button>
+              </div>
+            )}
 
             {scheduleTab === 'UPCOMING' ? (
               <div className="animate-in fade-in slide-in-from-left-4 duration-500">
@@ -142,8 +261,12 @@ const App: React.FC = () => {
                   {upcomingShifts.length === 0 ? (
                     <div className="text-center py-24 px-10 bg-wish-900/40 border-2 border-dashed border-wish-800 rounded-[3rem] flex flex-col items-center">
                       <div className="w-20 h-20 bg-wish-800/50 rounded-full flex items-center justify-center mb-6 text-4xl animate-bounce">🗓️</div>
-                      <h3 className="text-2xl font-black text-white mb-2">Empty Schedule</h3>
-                      <button onClick={() => setCurrentView('SELF_SCHEDULE')} className="w-full max-w-[200px] bg-wish-accent text-white py-4 rounded-2xl text-sm font-black mt-6 uppercase tracking-wider">Self-Schedule</button>
+                      <h3 className="text-2xl font-black text-white mb-2">
+                        {searchQuery ? "No Matches" : "Empty Schedule"}
+                      </h3>
+                      <button onClick={() => { setSearchQuery(''); setCurrentView('SELF_SCHEDULE'); }} className="w-full max-w-[200px] bg-wish-accent text-white py-4 rounded-2xl text-sm font-black mt-6 uppercase tracking-wider">
+                        {searchQuery ? "Clear Search" : "Self-Schedule"}
+                      </button>
                     </div>
                   ) : (
                     (Object.entries(groupedUpcomingShifts) as [string, Shift[]][]).map(([month, monthShifts]) => (
@@ -177,6 +300,11 @@ const App: React.FC = () => {
                      ))}
                    </div>
                  )}
+                 {pastShifts.length === 0 && searchQuery && (
+                    <div className="text-center py-12">
+                       <p className="text-gray-500 font-bold uppercase text-[10px] tracking-widest">No matching history found.</p>
+                    </div>
+                 )}
               </div>
             )}
           </>
@@ -184,6 +312,15 @@ const App: React.FC = () => {
 
         {currentView === 'SELF_SCHEDULE' && <div className="animate-in slide-in-from-right-8 fade-in duration-500"><Marketplace onNotify={handleNotify} taxRate={taxRate} userId={session.user.id} /></div>}
         {currentView === 'EMPLOYER' && <div className="animate-in slide-in-from-right-8 fade-in duration-500"><EmployerDashboard onNotify={handleNotify} user={session.user} /></div>}
+
+        <footer className="mt-12 mb-8 text-center space-y-2 opacity-30 hover:opacity-100 transition-opacity">
+          <p className="text-[9px] text-gray-500 font-black uppercase tracking-[0.2em]">
+            Miles A. Moore | Outside We Stand Eternally, LLC
+          </p>
+          <p className="text-[8px] text-gray-600 font-bold uppercase tracking-widest italic">
+            A self scheduling concept for CSC security
+          </p>
+        </footer>
       </main>
 
       <nav className="fixed bottom-0 left-0 right-0 glass border-t border-wish-700 shadow-[0_-10px_40px_rgba(0,0,0,0.6)] pb-safe z-40 transition-transform duration-500">

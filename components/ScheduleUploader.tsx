@@ -25,6 +25,8 @@ const PRESET_ASSIGNMENTS = [
 const ScheduleUploader: React.FC<ScheduleUploaderProps> = ({ onImport, onClose }) => {
   const [jobName, setJobName] = useState('Main Staff');
   const [venueName, setVenueName] = useState('Lucas Oil Stadium');
+  const [isCustomVenue, setIsCustomVenue] = useState(false);
+  const [customAddress, setCustomAddress] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [startTime, setStartTime] = useState('17:00');
   const [endTime, setEndTime] = useState('23:00');
@@ -35,7 +37,6 @@ const ScheduleUploader: React.FC<ScheduleUploaderProps> = ({ onImport, onClose }
     const start = new Date(`${date}T${startTime}:00`);
     const end = new Date(`${date}T${endTime}:00`);
     
-    // Handle overnight shifts
     if (end < start) {
       end.setDate(end.getDate() + 1);
     }
@@ -44,9 +45,9 @@ const ScheduleUploader: React.FC<ScheduleUploaderProps> = ({ onImport, onClose }
       id: crypto.randomUUID(),
       startDate: start.toISOString(),
       endDate: end.toISOString(),
-      jobName: `Security: ${jobName || "General Staff"}`,
+      jobName: jobName.startsWith('Security:') ? jobName : `Security: ${jobName || "General Staff"}`,
       venueName: venueName || "Local Venue",
-      address: "Indianapolis, IN",
+      address: isCustomVenue ? (customAddress || "Indianapolis, IN") : "Indianapolis, IN",
       status: 'CONFIRMED',
       source: 'MANUAL'
     };
@@ -103,19 +104,53 @@ const ScheduleUploader: React.FC<ScheduleUploaderProps> = ({ onImport, onClose }
             </section>
 
             <section>
-              <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest block mb-3 ml-2">Event Venue</label>
-              <div className="flex flex-wrap gap-2">
-                {PRESET_VENUES.map(venue => (
-                  <button 
-                    key={venue}
-                    type="button"
-                    onClick={() => setVenueName(venue)}
-                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border ${venueName === venue ? 'bg-indigo-500/20 border-indigo-500 text-white' : 'bg-wish-900 border-wish-800 text-gray-400'}`}
-                  >
-                    {venue}
-                  </button>
-                ))}
+              <div className="flex justify-between items-center mb-3 ml-2">
+                <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest block">Event Venue</label>
+                <button 
+                  type="button"
+                  onClick={() => {
+                    setIsCustomVenue(!isCustomVenue);
+                    if (!isCustomVenue) setVenueName('');
+                    else setVenueName(PRESET_VENUES[0]);
+                  }}
+                  className={`text-[9px] font-black uppercase px-2 py-1 rounded-lg border transition-all ${isCustomVenue ? 'bg-wish-accent border-wish-accent text-white' : 'border-wish-700 text-gray-500'}`}
+                >
+                  {isCustomVenue ? 'Use Presets' : 'Custom'}
+                </button>
               </div>
+
+              {!isCustomVenue ? (
+                <div className="flex flex-wrap gap-2">
+                  {PRESET_VENUES.map(venue => (
+                    <button 
+                      key={venue}
+                      type="button"
+                      onClick={() => setVenueName(venue)}
+                      className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border ${venueName === venue ? 'bg-indigo-500/20 border-indigo-500 text-white' : 'bg-wish-900 border-wish-800 text-gray-400'}`}
+                    >
+                      {venue}
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div className="space-y-4 animate-in fade-in duration-300">
+                  <input 
+                    type="text" 
+                    required
+                    placeholder="Venue Name..."
+                    value={venueName}
+                    onChange={(e) => setVenueName(e.target.value)}
+                    className="w-full bg-wish-900 border border-wish-800 focus:border-wish-accent p-4 text-sm font-bold text-white outline-none transition-all rounded-2xl"
+                  />
+                  <input 
+                    type="text" 
+                    placeholder="Address (Optional)..."
+                    value={customAddress}
+                    onChange={(e) => setCustomAddress(e.target.value)}
+                    className="w-full bg-wish-900 border border-wish-800 focus:border-wish-accent p-4 text-xs font-bold text-white outline-none transition-all rounded-2xl"
+                  />
+                </div>
+              )}
             </section>
 
             <section className="bg-wish-900 p-6 rounded-[2.5rem] border border-wish-800 shadow-inner">

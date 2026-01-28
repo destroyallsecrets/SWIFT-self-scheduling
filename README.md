@@ -1,20 +1,64 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# SWIFT: Schedule, Wages, Income, Financial Tracker
 
-# Run and deploy your AI Studio app
+**A Self-Scheduling Concept for CSC Security Operations**
 
-This contains everything you need to run your app locally.
+Developed by **Miles A. Moore**  
+*Outside We Stand Eternally, LLC*
 
-View your app in AI Studio: https://ai.studio/apps/drive/1gLXJ2Lj4humc_mSeGCi8csGMiIqw_x9L
+---
 
-## Run Locally
+## 🚀 Overview
 
-**Prerequisites:**  Node.js
+**SWIFT** is a mobile-first, high-performance web application designed to streamline the deployment and financial tracking of security personnel. Replicating the modern "WISH" app interface, SWIFT provides a seamless bridge between operational management and frontline staff.
 
+It solves the "Last Mile" problem in event staffing by allowing workers to self-schedule into open slots while providing real-time financial transparency—calculating exact net take-home pay based on localized tax rates.
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+## ✨ Key Features
+
+### 🛡️ For Security Professionals (Staff)
+- **Self-Scheduling Marketplace:** Browse and claim open security details at major venues (Lucas Oil Stadium, Gainbridge Fieldhouse, etc.).
+- **Live Earnings Tracker:** See exactly how much you've earned gross and net (after taxes) for upcoming shifts.
+- **Smart Archive:** A full history of past earnings grouped by month and week for tax preparation and financial planning.
+- **Manual Sync:** Quick-entry tool to add shifts that aren't yet in the digital system.
+
+### 👔 For Operational Management (Admin)
+- **Gig Dispatch:** Create and broadcast new security details to the entire workforce instantly.
+- **Worker Approvals:** Manage a queue of claim requests to ensure the right staff are assigned to the right posts.
+- **Deployment Overview:** Real-time visibility into current and future staffing levels.
+
+### 📊 Tax Engine
+- **Localized Presets:** Pre-configured tax rates for Indianapolis, Chicago, Nashville, Louisville, Cincinnati, and Columbus.
+- **Deep Precision:** Accounts for Federal, FICA, State, and County (e.g., Marion Co 2.02%) withholdings.
+- **Custom Mode:** Allows users to input their specific withholding percentages for total accuracy.
+
+## 🛠️ Technical Architecture
+
+SWIFT is built as a highly responsive **Progressive Web App (PWA)** using:
+
+- **Frontend:** React 19 + TypeScript
+- **Styling:** Tailwind CSS (Custom "Wish-inspired" dark theme)
+- **Build Tool:** Vite
+- **Storage:** LocalStorage-based "Development Backend" (Relational User/Shift structures)
+- **Deployment Ready:** Architecture prepared for migration to production SQL/NoSQL databases with centralized authentication.
+
+## 📁 Repository Structure
+
+- `/src/components`: Modular UI components (FinancialSummary, Marketplace, EmployerDashboard, etc.)
+- `/src/services`: Mock development backend and API simulation.
+- `/src/utils`: High-precision financial and time calculation engines.
+- `types.ts`: Strongly typed data structures for Users, Shifts, and Sessions.
+
+## 📜 Intellectual Property & Credits
+
+This application is a conceptual prototype developed to demonstrate modernized workforce management in the security sector.
+
+- **Developer:** Miles A. Moore
+- **Organization:** Outside We Stand Eternally, LLC
+- **Concept:** Self-scheduling for CSC (Contemporary Services Corporation) Security Operations.
+
+## 🔗 Links
+
+- **Repository:** [https://github.com/OutsideWeStandEternally](https://github.com/OutsideWeStandEternally)
+
+---
+*Disclaimer: This is a conceptual tool and is not an official product of Contemporary Services Corporation. All trademarks belong to their respective owners.*

@@ -15,6 +15,14 @@ const PRESET_ASSIGNMENTS = [
   "Event Level"
 ];
 
+const VENUE_PRESETS = [
+  "Lucas Oil Stadium",
+  "Gainbridge Fieldhouse",
+  "TCU Amphitheater",
+  "Indianapolis Motor Speedway",
+  "Victory Field"
+];
+
 const EmployerDashboard: React.FC<EmployerDashboardProps> = ({ onNotify, user }) => {
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [activeTab, setActiveTab] = useState<'create' | 'requests'>('create');
@@ -22,6 +30,8 @@ const EmployerDashboard: React.FC<EmployerDashboardProps> = ({ onNotify, user })
   // Form State
   const [jobName, setJobName] = useState('Main Staff');
   const [venueName, setVenueName] = useState('Lucas Oil Stadium');
+  const [isCustomVenue, setIsCustomVenue] = useState(false);
+  const [customAddress, setCustomAddress] = useState('');
   const [date, setDate] = useState('2026-06-01');
   const [startTime, setStartTime] = useState('17:00');
   const [endTime, setEndTime] = useState('23:00');
@@ -55,12 +65,17 @@ const EmployerDashboard: React.FC<EmployerDashboardProps> = ({ onNotify, user })
       await MockBackend.postMarketplaceShift({
         startDate: start.toISOString(),
         endDate: end.toISOString(),
-        jobName: `Security: ${jobName}`,
+        jobName: jobName.startsWith('Security:') ? jobName : `Security: ${jobName}`,
         venueName,
-        address: 'Indianapolis, IN'
+        address: isCustomVenue ? customAddress : 'Indianapolis, IN'
       }, user.id);
       onNotify('Security Posting Published');
       fetchShifts();
+      // Reset some fields
+      if (isCustomVenue) {
+        setIsCustomVenue(false);
+        setCustomAddress('');
+      }
     } catch (err) {
       console.error(err);
     } finally {
@@ -111,9 +126,11 @@ const EmployerDashboard: React.FC<EmployerDashboardProps> = ({ onNotify, user })
 
       {activeTab === 'create' && (
         <div className="bg-wish-900 border border-wish-800 rounded-[2.5rem] p-6 animate-in fade-in slide-in-from-bottom-4">
-          <div className="mb-6">
-            <h2 className="text-xl font-black text-white tracking-tight">Post Security Detail</h2>
-            <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-1">Operational Workforce Management</p>
+          <div className="mb-6 flex justify-between items-start">
+            <div>
+              <h2 className="text-xl font-black text-white tracking-tight">Post Security Detail</h2>
+              <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-1">Operational Workforce Management</p>
+            </div>
           </div>
 
           <form onSubmit={handleCreateShift} className="space-y-6">
@@ -142,18 +159,49 @@ const EmployerDashboard: React.FC<EmployerDashboardProps> = ({ onNotify, user })
             </div>
 
             <div className="space-y-3">
-              <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-2">Venue Location</label>
-              <select 
-                value={venueName}
-                onChange={e => setVenueName(e.target.value)}
-                className="w-full bg-wish-800 border border-wish-700 rounded-2xl p-4 text-white font-bold focus:border-wish-accent outline-none appearance-none cursor-pointer"
-              >
-                <option>Lucas Oil Stadium</option>
-                <option>Gainbridge Fieldhouse</option>
-                <option>TCU Amphitheater</option>
-                <option>Indianapolis Motor Speedway</option>
-                <option>Victory Field</option>
-              </select>
+              <div className="flex justify-between items-center ml-2">
+                <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Venue Location</label>
+                <button 
+                  type="button"
+                  onClick={() => {
+                    setIsCustomVenue(!isCustomVenue);
+                    if (!isCustomVenue) setVenueName('');
+                    else setVenueName(VENUE_PRESETS[0]);
+                  }}
+                  className={`text-[9px] font-black uppercase px-2 py-1 rounded-lg border transition-all ${isCustomVenue ? 'bg-wish-accent border-wish-accent text-white' : 'border-wish-700 text-gray-500'}`}
+                >
+                  {isCustomVenue ? 'Use Presets' : 'Custom Location'}
+                </button>
+              </div>
+
+              {!isCustomVenue ? (
+                <select 
+                  value={venueName}
+                  onChange={e => setVenueName(e.target.value)}
+                  className="w-full bg-wish-800 border border-wish-700 rounded-2xl p-4 text-white font-bold focus:border-wish-accent outline-none appearance-none cursor-pointer"
+                >
+                  {VENUE_PRESETS.map(v => <option key={v}>{v}</option>)}
+                </select>
+              ) : (
+                <div className="space-y-3 animate-in fade-in duration-300">
+                  <input 
+                    type="text" 
+                    required
+                    value={venueName}
+                    onChange={e => setVenueName(e.target.value)}
+                    className="w-full bg-wish-800 border border-wish-700 rounded-2xl p-4 text-white focus:border-wish-accent outline-none font-bold"
+                    placeholder="Venue Name (e.g. Skyline Event Center)"
+                  />
+                  <input 
+                    type="text" 
+                    required
+                    value={customAddress}
+                    onChange={e => setCustomAddress(e.target.value)}
+                    className="w-full bg-wish-800 border border-wish-700 rounded-2xl p-4 text-white focus:border-wish-accent outline-none font-bold text-xs"
+                    placeholder="Street Address, City, State"
+                  />
+                </div>
+              )}
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-wish-950/50 p-4 rounded-3xl border border-wish-800">
@@ -206,7 +254,7 @@ const EmployerDashboard: React.FC<EmployerDashboardProps> = ({ onNotify, user })
                   <div key={shift.id} className="text-[11px] p-4 bg-wish-800/50 rounded-2xl border border-wish-800 flex justify-between items-center group hover:border-wish-700 transition-colors">
                     <div className="flex flex-col">
                        <span className="text-white font-bold">{shift.jobName}</span>
-                       <span className="text-gray-500 text-[9px] uppercase font-black tracking-tighter mt-0.5">{shift.venueName}</span>
+                       <span className="text-gray-500 text-[9px] uppercase font-black tracking-tighter mt-0.5 truncate max-w-[150px]">{shift.venueName}</span>
                     </div>
                     <span className={`px-2.5 py-1 rounded-lg font-black text-[9px] tracking-widest uppercase border ${shift.status === 'CONFIRMED' ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' : 'text-blue-400 bg-blue-500/10 border-blue-500/20'}`}>
                       {shift.status}
