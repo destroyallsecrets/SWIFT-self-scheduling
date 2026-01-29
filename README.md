@@ -1,3 +1,4 @@
+
 # SWIFT: Schedule, Wages, Income, Financial Tracker
 
 **A Self-Scheduling Concept for CSC Security Operations**
@@ -16,49 +17,40 @@ It solves the "Last Mile" problem in event staffing by allowing workers to self-
 ## ✨ Key Features
 
 ### 🛡️ For Security Professionals (Staff)
-- **Self-Scheduling Marketplace:** Browse and claim open security details at major venues (Lucas Oil Stadium, Gainbridge Fieldhouse, etc.).
-- **Live Earnings Tracker:** See exactly how much you've earned gross and net (after taxes) for upcoming shifts.
-- **Smart Archive:** A full history of past earnings grouped by month and week for tax preparation and financial planning.
-- **Manual Sync:** Quick-entry tool to add shifts that aren't yet in the digital system.
+- **Thumb-Optimized Navigation:** A high-contrast floating action button (FAB) positioned for easy reach with either thumb.
+- **Self-Scheduling Marketplace:** Browse and claim open security details at major venues.
+- **Live Earnings Tracker:** Real-time net take-home pay calculations.
+- **Modular Dashboard:** Toggle between Upcoming gigs and historical Income Archives.
 
 ### 👔 For Operational Management (Admin)
-- **Gig Dispatch:** Create and broadcast new security details to the entire workforce instantly.
-- **Worker Approvals:** Manage a queue of claim requests to ensure the right staff are assigned to the right posts.
-- **Deployment Overview:** Real-time visibility into current and future staffing levels.
+- **Gig Dispatch:** Create and broadcast new security details instantly.
+- **Worker Approvals:** Integrated request management for post-assignments.
 
-### 📊 Tax Engine
-- **Localized Presets:** Pre-configured tax rates for Indianapolis, Chicago, Nashville, Louisville, Cincinnati, and Columbus.
-- **Deep Precision:** Accounts for Federal, FICA, State, and County (e.g., Marion Co 2.02%) withholdings.
-- **Custom Mode:** Allows users to input their specific withholding percentages for total accuracy.
+---
 
-## 🛠️ Technical Architecture
+## 📝 Update Log (Project Evolution)
 
-SWIFT is built as a highly responsive **Progressive Web App (PWA)** using:
+### v1.2.0 - The "Thumb-Reach" Update (Current)
+- **Ergonomic Refactor:** Moved "Sync Shift" action to a floating button above the bottom navigation for effortless thumb access.
+- **Dynamic UI:** FAB now contextually fades and scales based on the active view.
+- **Animation Suite:** Added pulse/glow effects to primary actions to guide user flow.
 
-- **Frontend:** React 19 + TypeScript
-- **Styling:** Tailwind CSS (Custom "Wish-inspired" dark theme)
-- **Build Tool:** Vite
-- **Storage:** LocalStorage-based "Development Backend" (Relational User/Shift structures)
-- **Deployment Ready:** Architecture prepared for migration to production SQL/NoSQL databases with centralized authentication.
+### v1.1.0 - Architecture Refactor
+- **Modular Components:** Extracted logic into `useShifts` hook and separated UI into atomic components (`Header`, `BottomNav`, `FilterPanel`).
+- **Performance:** Optimized React state management and filtering logic for zero-latency interactions.
 
-## 📁 Repository Structure
+### v1.0.0 - Foundation & Tax Engine
+- **Core Engine:** Established the precision tax withholding calculator for Indianapolis and regional hubs.
+- **Wish UI:** Designed the signature dark-glass interface and typography.
+- **Mock Sync:** Created a resilient local-storage backend for development and testing.
 
-- `/src/components`: Modular UI components (FinancialSummary, Marketplace, EmployerDashboard, etc.)
-- `/src/services`: Mock development backend and API simulation.
-- `/src/utils`: High-precision financial and time calculation engines.
-- `types.ts`: Strongly typed data structures for Users, Shifts, and Sessions.
+---
 
 ## 📜 Intellectual Property & Credits
-
-This application is a conceptual prototype developed to demonstrate modernized workforce management in the security sector.
 
 - **Developer:** Miles A. Moore
 - **Organization:** Outside We Stand Eternally, LLC
 - **Concept:** Self-scheduling for CSC (Contemporary Services Corporation) Security Operations.
 
-## 🔗 Links
-
-- **Repository:** [https://github.com/OutsideWeStandEternally](https://github.com/OutsideWeStandEternally)
-
 ---
-*Disclaimer: This is a conceptual tool and is not an official product of Contemporary Services Corporation. All trademarks belong to their respective owners.*
+*Disclaimer: This is a conceptual tool and is not an official product of Contemporary Services Corporation.*

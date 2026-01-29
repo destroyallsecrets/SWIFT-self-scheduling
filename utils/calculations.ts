@@ -1,12 +1,18 @@
 import { Shift, Earnings } from '../types';
 import { HOURLY_RATE } from '../constants';
 
+/**
+ * Calculates the duration between two ISO dates in decimal hours.
+ */
 export const calculateDurationHours = (start: string, end: string): number => {
   const s = new Date(start).getTime();
   const e = new Date(end).getTime();
   return Math.max(0, (e - s) / (1000 * 60 * 60));
 };
 
+/**
+ * Calculates gross, net, and deductions based on hours and a flat tax rate.
+ */
 export const calculateEarnings = (hours: number, taxRate: number): Earnings => {
   const gross = hours * HOURLY_RATE;
   const deductions = gross * taxRate;
@@ -20,6 +26,9 @@ export const calculateEarnings = (hours: number, taxRate: number): Earnings => {
   };
 };
 
+/**
+ * Aggregates earnings for an array of shifts.
+ */
 export const getEarningsForShifts = (shifts: Shift[], taxRate: number): Earnings => {
   let totalHours = 0;
   shifts.forEach(shift => {
@@ -28,6 +37,23 @@ export const getEarningsForShifts = (shifts: Shift[], taxRate: number): Earnings
   return calculateEarnings(totalHours, taxRate);
 };
 
+/**
+ * Groups shifts by Month/Year for the 'Upcoming' view.
+ */
+export const groupShiftsByMonth = (shifts: Shift[]): Record<string, Shift[]> => {
+  const groups: Record<string, Shift[]> = {};
+  shifts.forEach(shift => {
+    const date = new Date(shift.startDate);
+    const key = date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(shift);
+  });
+  return groups;
+};
+
+/**
+ * Advanced grouping for the 'Archive' view, breaking down by month and week.
+ */
 export const groupShiftsByMonthAndWeek = (shifts: Shift[], taxRate: number): MonthlyGroup[] => {
   const groups: Record<string, MonthlyGroup> = {};
 
