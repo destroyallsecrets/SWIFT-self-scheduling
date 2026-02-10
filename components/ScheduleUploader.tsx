@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Shift } from '../types';
 
@@ -21,6 +22,24 @@ const PRESET_ASSIGNMENTS = [
   "Suites",
   "Event Level"
 ];
+
+const PRESET_TIMES = [
+  { label: "Morning", start: "07:00", end: "15:00" },
+  { label: "Day", start: "10:00", end: "18:00" },
+  { label: "Event", start: "16:30", end: "23:00" },
+  { label: "Late", start: "18:00", end: "02:00" }
+];
+
+const HOURS = Array.from({ length: 24 }, (_, i) => {
+  const h = i;
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  const labelH = h % 12 === 0 ? 12 : h % 12;
+  return { 
+    value: `${h.toString().padStart(2, '0')}:00`, 
+    label: `${labelH}${ampm}`,
+    hourStr: h.toString().padStart(2, '0')
+  };
+});
 
 const ScheduleUploader: React.FC<ScheduleUploaderProps> = ({ onImport, onClose }) => {
   const [jobName, setJobName] = useState('Main Staff');
@@ -155,33 +174,101 @@ const ScheduleUploader: React.FC<ScheduleUploaderProps> = ({ onImport, onClose }
 
             <section className="bg-wish-900 p-6 rounded-[2.5rem] border border-wish-800 shadow-inner">
               <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest block mb-4 ml-2 text-center">Deployment Window (24h)</label>
-              <div className="space-y-6">
+              
+              {/* Quick Range Selectors */}
+              <div className="flex flex-wrap gap-2 mb-6 justify-center">
+                {PRESET_TIMES.map(preset => {
+                  const isActive = startTime === preset.start && endTime === preset.end;
+                  return (
+                    <button 
+                      key={preset.label}
+                      type="button"
+                      onClick={() => { setStartTime(preset.start); setEndTime(preset.end); }}
+                      className={`px-3 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-wider border transition-all flex flex-col items-center gap-0.5 min-w-[4.5rem] active:scale-95 ${
+                        isActive
+                          ? 'bg-wish-accent border-wish-accent text-white shadow-lg shadow-indigo-500/30 scale-105' 
+                          : 'bg-wish-800 border-wish-700 text-gray-500 hover:text-gray-300 hover:border-wish-600'
+                      }`}
+                    >
+                      <span>{preset.label}</span>
+                      <span className={`text-[8px] font-mono tracking-tighter ${isActive ? 'text-white/70' : 'text-gray-600'}`}>
+                        {preset.start.replace(':','')} - {preset.end.replace(':','')}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="space-y-8">
                 <input 
                   type="date" 
                   value={date}
                   onChange={(e) => setDate(e.target.value)}
-                  className="w-full bg-wish-800 p-5 rounded-2xl text-white font-black outline-none border border-wish-700 focus:border-wish-accent transition-all text-center"
+                  className="w-full bg-wish-800 p-5 rounded-2xl text-white font-black outline-none border border-wish-700 focus:border-wish-accent transition-all text-center text-lg shadow-sm"
                 />
                 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <span className="text-[10px] font-bold text-gray-600 uppercase ml-2">Clock In</span>
-                    <input 
-                      type="time" 
-                      value={startTime}
-                      onChange={(e) => setStartTime(e.target.value)}
-                      className="w-full bg-wish-800 p-5 rounded-2xl text-white font-mono font-black outline-none border border-wish-700 focus:border-wish-accent transition-all"
-                    />
+                {/* Clock In */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between ml-2">
+                    <span className="text-[10px] font-bold text-gray-600 uppercase tracking-widest">Clock In</span>
+                    <span className="text-[10px] font-mono font-bold text-wish-accent">{startTime}</span>
                   </div>
-                  <div className="space-y-2">
-                    <span className="text-[10px] font-bold text-gray-600 uppercase ml-2">Clock Out</span>
-                    <input 
-                      type="time" 
-                      value={endTime}
-                      onChange={(e) => setEndTime(e.target.value)}
-                      className="w-full bg-wish-800 p-5 rounded-2xl text-white font-mono font-black outline-none border border-wish-700 focus:border-wish-accent transition-all"
-                    />
+                  
+                  <div className="flex overflow-x-auto gap-2 pb-2 no-scrollbar px-1">
+                     {HOURS.map(h => (
+                       <button
+                         key={`start-${h.value}`}
+                         type="button"
+                         onClick={() => setStartTime(h.value)}
+                         className={`flex-shrink-0 w-14 h-10 rounded-xl text-[10px] font-black uppercase border transition-all flex items-center justify-center ${
+                           startTime.split(':')[0] === h.hourStr
+                           ? 'bg-wish-accent border-wish-accent text-white shadow-md shadow-indigo-500/20 scale-105'
+                           : 'bg-wish-800 border-wish-700 text-gray-500 hover:bg-wish-700 hover:text-gray-300'
+                         }`}
+                       >
+                         {h.label}
+                       </button>
+                     ))}
                   </div>
+
+                  <input 
+                    type="time" 
+                    value={startTime}
+                    onChange={(e) => setStartTime(e.target.value)}
+                    className="w-full bg-wish-800 p-4 rounded-2xl text-white font-mono font-black outline-none border border-wish-700 focus:border-wish-accent transition-all text-center text-sm"
+                  />
+                </div>
+
+                {/* Clock Out */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between ml-2">
+                    <span className="text-[10px] font-bold text-gray-600 uppercase tracking-widest">Clock Out</span>
+                    <span className="text-[10px] font-mono font-bold text-wish-accent">{endTime}</span>
+                  </div>
+                  
+                  <div className="flex overflow-x-auto gap-2 pb-2 no-scrollbar px-1">
+                     {HOURS.map(h => (
+                       <button
+                         key={`end-${h.value}`}
+                         type="button"
+                         onClick={() => setEndTime(h.value)}
+                         className={`flex-shrink-0 w-14 h-10 rounded-xl text-[10px] font-black uppercase border transition-all flex items-center justify-center ${
+                           endTime.split(':')[0] === h.hourStr
+                           ? 'bg-wish-accent border-wish-accent text-white shadow-md shadow-indigo-500/20 scale-105'
+                           : 'bg-wish-800 border-wish-700 text-gray-500 hover:bg-wish-700 hover:text-gray-300'
+                         }`}
+                       >
+                         {h.label}
+                       </button>
+                     ))}
+                  </div>
+
+                  <input 
+                    type="time" 
+                    value={endTime}
+                    onChange={(e) => setEndTime(e.target.value)}
+                    className="w-full bg-wish-800 p-4 rounded-2xl text-white font-mono font-black outline-none border border-wish-700 focus:border-wish-accent transition-all text-center text-sm"
+                  />
                 </div>
               </div>
             </section>
