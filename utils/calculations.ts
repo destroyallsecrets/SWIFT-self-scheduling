@@ -60,6 +60,7 @@ export interface PayPeriodGroup {
   workWeekLabel: string;
   shifts: Shift[];
   earnings: Earnings;
+  status: 'PAID' | 'PENDING' | 'PROCESSING';
 }
 
 export interface MonthlyPayGroup {
@@ -83,10 +84,15 @@ const toLocalYMD = (d: Date) => {
 /**
  * Calculates the CSC Pay Date (Friday of the following week).
  * Work Week: Monday - Sunday.
- * Pay Date: Friday after the Sunday.
+ * Pay Date: Friday of the week AFTER the work week ends (1 week lag).
+ * 
+ * Logic Hardened: Uses Noon (12:00) time to avoid DST drift.
  */
 export const getPayDateDetails = (dateStr: string) => {
-  const d = new Date(dateStr);
+  // Create a date object set to Noon local time to ensure date math is stable across DST
+  const input = new Date(dateStr);
+  const d = new Date(input.getFullYear(), input.getMonth(), input.getDate(), 12, 0, 0);
+  
   const day = d.getDay(); // 0=Sun, 1=Mon... 6=Sat
   
   // Calculate end of work week (Sunday)
@@ -95,16 +101,15 @@ export const getPayDateDetails = (dateStr: string) => {
   
   const endOfWeek = new Date(d);
   endOfWeek.setDate(d.getDate() + daysToSunday);
-  endOfWeek.setHours(23, 59, 59, 999);
-
+  
   const startOfWeek = new Date(endOfWeek);
   startOfWeek.setDate(endOfWeek.getDate() - 6);
-  startOfWeek.setHours(0, 0, 0, 0);
 
-  // Pay Date is Friday after End of Week (Sunday + 5 days)
+  // Pay Date is Friday of the FOLLOWING week.
+  // End of Week (Sunday) + 12 days = Friday of next week.
+  // e.g., Sun 1st + 12 = Fri 13th.
   const payDate = new Date(endOfWeek);
-  payDate.setDate(endOfWeek.getDate() + 5);
-  payDate.setHours(0, 0, 0, 0);
+  payDate.setDate(endOfWeek.getDate() + 12);
 
   return {
     payDate,
@@ -119,6 +124,8 @@ export const getPayDateDetails = (dateStr: string) => {
  */
 export const groupShiftsByPayPeriod = (shifts: Shift[], taxRate: number): MonthlyPayGroup[] => {
   const periods: Record<string, PayPeriodGroup> = {};
+  const today = new Date();
+  today.setHours(0,0,0,0);
 
   // 1. Group shifts into Pay Periods (Pay Dates)
   shifts.forEach(shift => {
@@ -130,12 +137,22 @@ export const groupShiftsByPayPeriod = (shifts: Shift[], taxRate: number): Monthl
       const weekStartStr = startOfWeek.toLocaleDateString('en-US', { month: 'numeric', day: 'numeric' });
       const weekEndStr = endOfWeek.toLocaleDateString('en-US', { month: 'numeric', day: 'numeric' });
       
+      let status: 'PAID' | 'PENDING' | 'PROCESSING' = 'PAID';
+      if (payDate > today) {
+        // If pay date is in future
+        const diffTime = Math.abs(payDate.getTime() - today.getTime());
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+        // If within 7 days (the pay week), it's processing. Before that, it's waiting.
+        status = diffDays <= 7 ? 'PROCESSING' : 'PENDING';
+      }
+
       periods[payDateIso] = {
         payDateIso,
         payDateLabel: payLabel,
-        workWeekLabel: `Week: ${weekStartStr} - ${weekEndStr}`,
+        workWeekLabel: `${weekStartStr} - ${weekEndStr}`,
         shifts: [],
-        earnings: { hours: 0, gross: 0, net: 0, deductions: 0 }
+        earnings: { hours: 0, gross: 0, net: 0, deductions: 0 },
+        status
       };
     }
     periods[payDateIso].shifts.push(shift);

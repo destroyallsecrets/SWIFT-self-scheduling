@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Shift, User } from '../types';
 import { MockBackend } from '../services/mockBackend';
@@ -32,7 +33,7 @@ const EmployerDashboard: React.FC<EmployerDashboardProps> = ({ onNotify, user })
   const [venueName, setVenueName] = useState('Lucas Oil Stadium');
   const [isCustomVenue, setIsCustomVenue] = useState(false);
   const [customAddress, setCustomAddress] = useState('');
-  const [date, setDate] = useState('2026-06-01');
+  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [startTime, setStartTime] = useState('17:00');
   const [endTime, setEndTime] = useState('23:00');
   const [submitting, setSubmitting] = useState(false);
